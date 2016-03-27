@@ -1,6 +1,7 @@
 var sm = new (require('sphericalmercator'));
 var queue = require('queue-async');
 var blend = require('mapnik').blend;
+var Image = require('mapnik').Image;
 var crypto = require('crypto');
 
 module.exports = abaculus;
@@ -11,8 +12,10 @@ function abaculus(arg, callback) {
         center = arg.center || null,
         bbox = arg.bbox || null,
         getTile = arg.getTile || null,
+        getMarker = arg.getMarker || null,
         format = arg.format || 'png',
-        quality = arg.quality || null;
+        quality = arg.quality || null,
+        markers = arg.markers || [],
         limit = arg.limit || 19008;
 
     if (!getTile)
@@ -29,9 +32,10 @@ function abaculus(arg, callback) {
     }
     // generate list of tile coordinates center
     var coords = abaculus.tileList(z, s, center);
+    coords.markers = abaculus.markerList(z, center, markers);
 
     // get tiles based on coordinate list and stitch them together
-    abaculus.stitchTiles(coords, format, quality, getTile, callback);
+    abaculus.stitchTiles(coords, format, quality, getTile, getMarker, callback);
 }
 
 abaculus.coordsFromBbox = function(z, s, bbox, limit) {
@@ -63,6 +67,20 @@ abaculus.coordsFromCenter = function(z, s, center, limit) {
 
     if (center.w >= limit || center.h >= limit) throw new Error('Desired image is too large.');
     return center;
+};
+
+abaculus.markerList = function(z, center, markers) {
+  var originX = Math.floor(center.x - (center.w / 2));
+  var originY = Math.floor(center.y - (center.h / 2));
+
+  markers.forEach(function(marker) {
+    var location = sm.px([marker.x, marker.y], z);
+
+    marker.px = location[0] - originX;
+    marker.py = location[1] - originY;
+  });
+
+  return markers;
 };
 
 // Generate the zxy and px/py offsets needed for each tile in a static image.
@@ -144,13 +162,14 @@ abaculus.tileList = function(z, s, center) {
     return coords;
 };
 
-abaculus.stitchTiles = function(coords, format, quality, getTile, callback) {
+abaculus.stitchTiles = function(coords, format, quality, getTile, getMarker, callback) {
     if (!coords) return callback(new Error('No coords object.'));
     var tileQueue = queue(32);
     var dat = [];
     var w = coords.dimensions.x,
         h = coords.dimensions.y,
         s = coords.scale,
+        markers = coords.markers,
         tiles = coords.tiles;
 
     tiles.forEach(function(t) {
@@ -171,6 +190,28 @@ abaculus.stitchTiles = function(coords, format, quality, getTile, callback) {
             // a tile given z, x, y, & callback
             getTile(z, x, y, cb);
         }, t.z, t.x, t.y, t.px, t.py);
+    });
+
+    markers.forEach(function(m) {
+      tileQueue.defer(function(url, px, py, done) {
+        var cb = function(err, buffer, headers) {
+          if (err) return done(err);
+          Image.fromBytes(buffer, function(err, img) {
+            if (err) return done(err);
+            px -= img.width() / 2;
+            py -= img.height() / 2;
+
+            done(err, {
+              buffer: buffer,
+              headers: headers,
+              x: px,
+              y: py,
+              reencode: false
+            });
+          });
+        };
+        getMarker(url, cb);
+      }, m.url, m.px, m.py);
     });
 
     function tileQueueFinish(err, data) {
