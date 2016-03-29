@@ -3,6 +3,7 @@ var queue = require('queue-async');
 var blend = require('mapnik').blend;
 var Image = require('mapnik').Image;
 var crypto = require('crypto');
+var attribution = require('./attribution');
 
 module.exports = abaculus;
 
@@ -16,6 +17,7 @@ function abaculus(arg, callback) {
         format = arg.format || 'png',
         quality = arg.quality || null,
         markers = arg.markers || [],
+        attribute = arg.attribute || false,
         limit = arg.limit || 19008;
 
     if (!getTile)
@@ -35,7 +37,7 @@ function abaculus(arg, callback) {
     coords.markers = abaculus.markerList(z, center, markers);
 
     // get tiles based on coordinate list and stitch them together
-    abaculus.stitchTiles(coords, format, quality, getTile, getMarker, callback);
+    abaculus.stitchTiles(coords, format, quality, getTile, getMarker, attribute, callback);
 }
 
 abaculus.coordsFromBbox = function(z, s, bbox, limit) {
@@ -162,7 +164,7 @@ abaculus.tileList = function(z, s, center) {
     return coords;
 };
 
-abaculus.stitchTiles = function(coords, format, quality, getTile, getMarker, callback) {
+abaculus.stitchTiles = function(coords, format, quality, getTile, getMarker, attribute, callback) {
     if (!coords) return callback(new Error('No coords object.'));
     var tileQueue = queue(32);
     var dat = [];
@@ -221,6 +223,10 @@ abaculus.stitchTiles = function(coords, format, quality, getTile, getMarker, cal
         data.forEach(function(d, i) {
             headers.push(d.headers);
         });
+
+        if(attribute) {
+          data.push(attribution(w, h));
+        }
 
         blend(data, {
             format: format,
