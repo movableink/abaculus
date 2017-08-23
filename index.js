@@ -1,4 +1,4 @@
-var sm = new (require('sphericalmercator'));
+var sm = new (require('@mapbox/sphericalmercator'));
 var queue = require('queue-async');
 var blend = require('mapnik').blend;
 var Image = require('mapnik').Image;
