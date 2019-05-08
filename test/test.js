@@ -201,7 +201,7 @@ describe('create list of tile coordinates', function() {
         };
 
         it('should fail if no coordinates object', function(done) {
-            printer.stitchTiles(null, format, quality, function() {}, function(err) {
+            printer.stitchTiles(null, format, quality, function() {}, function() {}, false, function(err) {
                 assert.equal(err.message, 'No coords object.');
                 done();
             });
@@ -210,7 +210,7 @@ describe('create list of tile coordinates', function() {
         it('should return tiles and stitch them together', function(done) {
             var expectedImage = fs.readFileSync(path.resolve(__dirname + '/expected/expected.' + size + '.png'));
 
-            printer.stitchTiles(expectedCoords, format, quality, getTileTest, function(err, image, header) {
+            printer.stitchTiles(expectedCoords, format, quality, getTileTest, function() {}, false,  function(err, image, header) {
                 fs.writeFile(__dirname + '/outputs/expected.' + size + '.png', image, function(err){
                     checkImage(image, expectedImage);
                     done();
