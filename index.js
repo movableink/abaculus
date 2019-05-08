@@ -34,7 +34,7 @@ function abaculus(arg, callback) {
     }
     // generate list of tile coordinates center
     var coords = abaculus.tileList(z, s, center, tileSize);
-    coords.markers = abaculus.markerList(z, s, center, markers);
+    coords.markers = abaculus.markerList(z, s, center, markers, tileSize);
 
     // get tiles based on coordinate list and stitch them together
     abaculus.stitchTiles(coords, format, quality, getTile, getMarker, attribute, callback);
@@ -72,7 +72,8 @@ abaculus.coordsFromCenter = function(z, s, center, limit, tileSize) {
     return center;
 };
 
-abaculus.markerList = function(z, s, center, markers) {
+abaculus.markerList = function(z, s, center, markers, tileSize) {
+  var sm = new SphericalMercator({ size: tileSize * s });
   var originX = Math.floor(center.x - (center.w / 2 / s));
   var originY = Math.floor(center.y - (center.h / 2 / s));
 
