@@ -252,6 +252,44 @@ describe('create list of tile coordinates', function() {
             });
         });
 
+        it('stitches images with markers', function(done) {
+            var expectedImage = fs.readFileSync(path.resolve(__dirname + '/expected/markers.' + size + '.png'));
+
+            var params = {
+                zoom: 1,
+                scale: 1,
+                center: {
+                    x: -74.790,
+                    y: 40.382,
+                    w: 500,
+                    h: 500
+                },
+                markers: [
+                  { x: -74.122, y: 40.753, url: 'http://example.com/foo' },
+                  { x: -71.122, y: 42.390, url: 'http://example.com/foo' },
+                  { x: -76.357, y: 38.65, url: 'http://example.com/foo' }
+                ],
+                getMarker: getMarkerTest,
+                format: 'png',
+                quality: 50,
+                tileSize: size,
+                getTile: getTileTest
+            };
+
+            printer(params, function(err, image) {
+                assert.equal(err, null);
+
+                fs.writeFile(__dirname + '/outputs/markers.' + size + '.png', image, function(err){
+                    assert.equal(err, null);
+                    console.log('\tVisually check image at '+ __dirname + '/outputs/markers.' + size + '.png');
+
+                    // byte by byte check of image:
+                    checkImage(image, expectedImage);
+                    done();
+                });
+            });
+        });
+
         it('stitches images with a wsen bbox', function(done) {
             var expectedImage = fs.readFileSync(path.resolve(__dirname + '/expected/bbox.' + size + '.png'));
 
@@ -315,6 +353,11 @@ describe('create list of tile coordinates', function() {
             expected.save('test/outputs/center.fail.png');
         }
         assert.equal(max_diff_pixels, diff_pixels);
+    }
+
+    function getMarkerTest(url, cb) {
+        const marker = fs.readFileSync(path.resolve(__dirname + '/fixtures/marker.png'));
+        cb(null, marker);
     }
 
 });
