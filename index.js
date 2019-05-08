@@ -173,7 +173,7 @@ abaculus.stitchTiles = function(coords, format, quality, getTile, getMarker, att
     var w = coords.dimensions.x,
         h = coords.dimensions.y,
         s = coords.scale,
-        markers = coords.markers,
+        markers = coords.markers || [],
         tiles = coords.tiles;
 
     tiles.forEach(function(t) {
